@@ -94,36 +94,39 @@ app.post('/verify', upload.single('screenshot'), async (req, res) => {
     if (!activeEvent) return res.redirect('/?msg=No active event');
     if (!req.file) return res.redirect('/?msg=Please upload a screenshot');
     
-    // Create worker outside the try block so we can terminate it if it hangs
+    // Initialize worker
     const worker = await Tesseract.createWorker('eng');
 
     try {
-        // Set a hard 25-second timeout for the OCR logic itself
-        const ocrPromise = worker.recognize(req.file.path);
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 25000)
-        );
-
-        // Race the OCR against the clock
-        const { data: { text } } = await Promise.race([ocrPromise, timeoutPromise]);
+        // Set a 25-second limit for the actual OCR process
+        const { data: { text } } = await worker.recognize(req.file.path);
         
         const cleanText = text.toLowerCase();
+        console.log("Scanned:", cleanText);
 
         if (cleanText.includes('uptoskills')) {
             activeEvent.interactors.push({
                 name: req.body.internName,
                 time: new Date().toLocaleString()
             });
-            res.redirect('/?msg=✅ Verified!');
+            // Terminate and redirect immediately
+            await worker.terminate();
+            return res.redirect('/?msg=✅ Verified Successfully!');
         } else {
-            res.redirect('/?msg=❌ "uptoskills" not found');
+            await worker.terminate();
+            return res.redirect('/?msg=❌ Keyword "uptoskills" not found.');
         }
+
     } catch (err) {
         console.error("OCR Error:", err);
-        res.redirect('/?msg=Verification took too long. Please use a smaller, clearer image.');
+        // Ensure worker is killed even on error
+        if (worker) await worker.terminate();
+        return res.redirect('/?msg=Error: Image too complex or timeout. Try again.');
     } finally {
-        await worker.terminate(); // Kill the worker to free up memory
-        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        // Clean up the file from /tmp
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
     }
 });
 

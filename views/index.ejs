@@ -52,34 +52,55 @@
     </div>
 
     <script>
-        const form = document.getElementById('verifyForm');
-        const fileInput = document.getElementById('screenshotInput');
-        const sizeError = document.getElementById('sizeError');
-        const submitBtn = document.getElementById('submitBtn');
-        const btnText = document.getElementById('btnText');
-        const spinner = document.getElementById('spinner');
+    const form = document.getElementById('verifyForm');
+    const fileInput = document.getElementById('screenshotInput');
+    const sizeError = document.getElementById('sizeError');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const spinner = document.getElementById('spinner');
 
-        // Client-side file size check (2MB limit)
-        fileInput.addEventListener('change', function() {
+    // 1. Client-side file size check (2MB limit)
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
             const fileSize = this.files[0].size / 1024 / 1024; // in MB
             if (fileSize > 2) {
                 sizeError.style.display = 'block';
                 submitBtn.disabled = true;
+                submitBtn.style.opacity = "0.5";
             } else {
                 sizeError.style.display = 'none';
                 submitBtn.disabled = false;
+                submitBtn.style.opacity = "1";
             }
-        });
+        }
+    });
 
-        form.onsubmit = function() {
-            // UI Feedback
+    // 2. Optimized Form Submission
+    form.onsubmit = function() {
+        // Change text and show spinner
+        btnText.innerText = "⏳ Scanning... Please wait";
+        spinner.style.display = "inline-block";
+        
+        // Use a slight delay to disable the button 
+        // This ensures the form actually "fires" before the button locks
+        setTimeout(() => {
             submitBtn.disabled = true;
-            btnText.innerText = "⏳ Scanning Screenshot... (Wait 20s)";
-            spinner.style.display = "inline-block";
-            
-            // This allows the form to actually submit to the server
-            return true; 
-        };
-    </script>
+        }, 50);
+
+        // 3. Safety Reset (The "Loop Breaker")
+        // If Vercel takes longer than 50 seconds, reset the button 
+        // so the user can try again without refreshing.
+        setTimeout(() => {
+            if (submitBtn.disabled) {
+                submitBtn.disabled = false;
+                btnText.innerText = "Verify Engagement";
+                spinner.style.display = "none";
+                alert("The server is taking too long. Please try again with a smaller image.");
+            }
+        }, 50000);
+
+        return true; 
+    };
+</script>
 </body>
 </html>
