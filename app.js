@@ -94,32 +94,35 @@ app.post('/verify', upload.single('screenshot'), async (req, res) => {
     if (!activeEvent) return res.redirect('/?msg=No active event');
     if (!req.file) return res.redirect('/?msg=Please upload a screenshot');
     
+    // Create worker outside the try block so we can terminate it if it hangs
+    const worker = await Tesseract.createWorker('eng');
+
     try {
-        // Vercel Strategy: Use a logger to track progress & set a timeout
-        const worker = await Tesseract.createWorker('eng');
-        
-        // We recognize the image
-        const { data: { text } } = await worker.recognize(req.file.path);
+        // Set a hard 25-second timeout for the OCR logic itself
+        const ocrPromise = worker.recognize(req.file.path);
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 25000)
+        );
+
+        // Race the OCR against the clock
+        const { data: { text } } = await Promise.race([ocrPromise, timeoutPromise]);
         
         const cleanText = text.toLowerCase();
-        console.log("OCR Scanned Text:", cleanText); // For debugging in Vercel Logs
 
-        // Check for 'uptoskills'
         if (cleanText.includes('uptoskills')) {
             activeEvent.interactors.push({
                 name: req.body.internName,
                 time: new Date().toLocaleString()
             });
-            await worker.terminate();
-            res.redirect('/?msg=✅ Verified! Name added to list.');
+            res.redirect('/?msg=✅ Verified!');
         } else {
-            await worker.terminate();
-            res.redirect('/?msg=❌ Verification Failed: "uptoskills" not detected.');
+            res.redirect('/?msg=❌ "uptoskills" not found');
         }
     } catch (err) {
         console.error("OCR Error:", err);
-        res.redirect('/?msg=OCR Timeout: Try a smaller/clearer screenshot');
+        res.redirect('/?msg=Verification took too long. Please use a smaller, clearer image.');
     } finally {
+        await worker.terminate(); // Kill the worker to free up memory
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     }
 });

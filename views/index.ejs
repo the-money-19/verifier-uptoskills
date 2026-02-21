@@ -8,9 +8,14 @@
         .nav { background: white; padding: 15px 10%; display: flex; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .card { background: white; max-width: 500px; margin: 40px auto; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
         .event-img { width: 100%; border-radius: 8px; margin: 20px 0; border: 1px solid #eee; }
-        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: 600; }
+        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: 600; transition: 0.3s; }
+        .btn:disabled { background: #ccc !important; cursor: not-allowed; }
         input[type="text"] { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #eee; border-radius: 6px; box-sizing: border-box; }
         .status { padding: 10px; border-radius: 6px; margin-top: 15px; background: #e8f0fe; color: var(--primary); font-weight: bold; }
+        
+        /* Loading Animation */
+        .spinner { display: none; margin: 10px auto; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -26,18 +31,55 @@
             
             <img src="<%= event.imageData %>" class="event-img">
             
-            <form action="/verify" method="POST" enctype="multipart/form-data">
+            <form id="verifyForm" action="/verify" method="POST" enctype="multipart/form-data">
                 <input type="text" name="internName" placeholder="Enter Your Full Name" required>
                 <div style="background: #f1f3f4; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px dashed #ccc;">
                     <p style="margin:0 0 10px 0; font-size: 0.9rem;">Upload Like Screenshot</p>
-                    <input type="file" name="screenshot" accept="image/*" required>
+                    <input type="file" id="screenshotInput" name="screenshot" accept="image/*" required>
+                    <p id="sizeError" style="color: red; font-size: 0.8rem; display: none; margin-top: 5px;">File too large! Please use a smaller screenshot (Max 2MB).</p>
                 </div>
-                <button class="btn">Verify Engagement</button>
+                
+                <button type="submit" class="btn" id="submitBtn">
+                    <span id="btnText">Verify Engagement</span>
+                    <div class="spinner" id="spinner"></div>
+                </button>
             </form>
         <% } else { %>
             <div style="padding: 40px;"><h2>No Active Events</h2><p>Check back later!</p></div>
         <% } %>
+        
         <% if (message) { %> <div class="status"><%= message %></div> <% } %>
     </div>
+
+    <script>
+        const form = document.getElementById('verifyForm');
+        const fileInput = document.getElementById('screenshotInput');
+        const sizeError = document.getElementById('sizeError');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const spinner = document.getElementById('spinner');
+
+        // Client-side file size check (2MB limit)
+        fileInput.addEventListener('change', function() {
+            const fileSize = this.files[0].size / 1024 / 1024; // in MB
+            if (fileSize > 2) {
+                sizeError.style.display = 'block';
+                submitBtn.disabled = true;
+            } else {
+                sizeError.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+
+        form.onsubmit = function() {
+            // UI Feedback
+            submitBtn.disabled = true;
+            btnText.innerText = "⏳ Scanning Screenshot... (Wait 20s)";
+            spinner.style.display = "inline-block";
+            
+            // This allows the form to actually submit to the server
+            return true; 
+        };
+    </script>
 </body>
 </html>
