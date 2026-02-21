@@ -6,26 +6,29 @@ const fs = require('fs');
 const session = require('express-session');
 
 const app = express();
-const port = 3000;
-
-// Ensure uploads folder exists
-if (!fs.existsSync('./uploads')) fs.mkdirSync('./uploads');
+// Use Vercel's dynamic port or 3000 for local
+const port = process.env.PORT || 3000;
 
 app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static('uploads'));
+
+// Serve static files correctly on Vercel
+app.use('/uploads', express.static('/tmp')); 
+
 app.use(session({
     secret: 'uptoskills-tl-secret',
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: true,
+    cookie: { secure: false } // Set to true if using HTTPS, but false is fine for now
 }));
 
-// In-memory Database
+// In-memory Database (Warning: Resets when Vercel goes idle)
 let events = []; 
 let activeEvent = null;
 
-//const upload = multer({ dest: 'uploads/' });
-const upload = multer({ dest: '/tmp' });
+// Vercel only allows writing to /tmp
+const upload = multer({ dest: '/tmp/' });
 
 // --- ROUTES ---
 
@@ -39,7 +42,9 @@ app.get('/login', (req, res) => res.render('login', { error: null }));
 
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
-    if ((username === 'harshal' || username === 'kshitij'|| username === 'sudhamrutha' || username === 'srisathya' || username === 'emesh') && password === '0000') {
+    // Your updated admin list
+    const admins = ['harshal', 'kshitij', 'sudhamrutha', 'srisathya', 'emesh'];
+    if (admins.includes(username) && password === '0000') {
         req.session.isAdmin = true;
         res.redirect('/admin');
     } else {
@@ -56,11 +61,13 @@ app.get('/admin', (req, res) => {
 // Create Event
 app.post('/create-event', upload.single('eventImage'), (req, res) => {
     if (!req.session.isAdmin) return res.redirect('/login');
+    if (!req.file) return res.redirect('/admin?msg=Upload failed');
+
     const newEvent = {
         id: Date.now(),
         title: req.body.title,
         description: req.body.description,
-        imagePath: req.file.path,
+        imagePath: req.file.path, // This is now in /tmp/
         interactors: [] 
     };
     events.push(newEvent);
@@ -85,32 +92,43 @@ app.get('/delete-event/:id', (req, res) => {
 // 4. Verification Logic
 app.post('/verify', upload.single('screenshot'), async (req, res) => {
     if (!activeEvent) return res.redirect('/?msg=No active event');
+    if (!req.file) return res.redirect('/?msg=Please upload a screenshot');
     
     try {
-        const { data: { text } } = await Tesseract.recognize(req.file.path, 'eng');
+        // Vercel Optimized Tesseract Call
+        const { data: { text } } = await Tesseract.recognize(req.file.path, 'eng', {
+            workerPath: 'https://unpkg.com/tesseract.js@v5.0.0/dist/worker.min.js',
+            langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+            corePath: 'https://unpkg.com/tesseract.js-core@v5.0.0/tesseract-core.wasm.js',
+            cachePath: '/tmp/tessdata'
+        });
+
         const cleanText = text.toLowerCase();
 
-        // Check for keyword 'uptoskills' in the screenshot
         if (cleanText.includes('uptoskills')) {
             activeEvent.interactors.push({
                 name: req.body.internName,
                 time: new Date().toLocaleString()
             });
-            fs.unlinkSync(req.file.path);
             res.redirect('/?msg=✅ Verified! Name added to list.');
         } else {
-            fs.unlinkSync(req.file.path);
             res.redirect('/?msg=❌ Verification Failed: "uptoskills" not detected.');
         }
     } catch (err) {
+        console.error("OCR Error:", err);
         res.redirect('/?msg=Error scanning image');
+    } finally {
+        // Always try to delete the temp file
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
     }
 });
 
-const { data: { text } } = await Tesseract.recognize(req.file.path, 'eng', {
-    workerPath: 'https://unpkg.com/tesseract.js@v5.0.0/dist/worker.min.js',
-    langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-    corePath: 'https://unpkg.com/tesseract.js-core@v5.0.0/tesseract-core.wasm.js',
-});
+// For Vercel, we export the app
+module.exports = app;
 
-app.listen(port, () => console.log(`🚀 Server: http://localhost:${port}`));
+// Only listen if running locally
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => console.log(`🚀 Local Server: http://localhost:${port}`));
+}
