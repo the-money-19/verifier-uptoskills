@@ -95,25 +95,30 @@ app.post('/verify', upload.single('screenshot'), async (req, res) => {
     if (!req.file) return res.redirect('/?msg=Please upload a screenshot');
     
     try {
-        const { data: { text } } = await Tesseract.recognize(req.file.path, 'eng', {
-            workerPath: 'https://unpkg.com/tesseract.js@v5.0.0/dist/worker.min.js',
-            langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-            corePath: 'https://unpkg.com/tesseract.js-core@v5.0.0/tesseract-core.wasm.js',
-            cachePath: '/tmp/tessdata'
-        });
+        // Vercel Strategy: Use a logger to track progress & set a timeout
+        const worker = await Tesseract.createWorker('eng');
+        
+        // We recognize the image
+        const { data: { text } } = await worker.recognize(req.file.path);
+        
+        const cleanText = text.toLowerCase();
+        console.log("OCR Scanned Text:", cleanText); // For debugging in Vercel Logs
 
-        if (text.toLowerCase().includes('uptoskills')) {
+        // Check for 'uptoskills'
+        if (cleanText.includes('uptoskills')) {
             activeEvent.interactors.push({
                 name: req.body.internName,
                 time: new Date().toLocaleString()
             });
+            await worker.terminate();
             res.redirect('/?msg=✅ Verified! Name added to list.');
         } else {
+            await worker.terminate();
             res.redirect('/?msg=❌ Verification Failed: "uptoskills" not detected.');
         }
     } catch (err) {
         console.error("OCR Error:", err);
-        res.redirect('/?msg=Error scanning image');
+        res.redirect('/?msg=OCR Timeout: Try a smaller/clearer screenshot');
     } finally {
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     }
