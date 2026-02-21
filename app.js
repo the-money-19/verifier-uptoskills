@@ -39,7 +39,7 @@ app.get('/login', (req, res) => res.render('login', { error: null }));
 
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
-    if ((username === 'harshal' || username === 'kshitij') && password === '0000') {
+    if ((username === 'harshal' || username === 'kshitij'|| username === 'sudhamrutha' || username === 'srisathya' || username === 'emesh') && password === '0000') {
         req.session.isAdmin = true;
         res.redirect('/admin');
     } else {
