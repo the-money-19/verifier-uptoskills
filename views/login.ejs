@@ -1,0 +1,11 @@
+<body style="font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+    <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; width: 300px;">
+        <h2 style="color: #1a73e8;">Admin Login</h2>
+        <form action="/login" method="POST">
+            <input type="text" name="username" placeholder="Username" required style="width:100%; padding:10px; margin:10px 0; border:1px solid #ddd; border-radius:4px;"><br>
+            <input type="password" name="password" placeholder="Password" required style="width:100%; padding:10px; margin:10px 0; border:1px solid #ddd; border-radius:4px;"><br>
+            <button type="submit" style="width:100%; padding:10px; background:#1a73e8; color:white; border:none; border-radius:4px; cursor:pointer;">Login</button>
+        </form>
+        <% if (error) { %> <p style="color:red; font-size:0.9rem;"><%= error %></p> <% } %>
+    </div>
+</body>

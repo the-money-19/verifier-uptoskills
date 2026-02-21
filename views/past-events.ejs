@@ -1,0 +1,30 @@
+<body style="font-family: sans-serif; background: #f4f7f6; padding: 40px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>Event Logs</h1>
+        <a href="/admin" style="text-decoration: none; background: #5f6368; color: white; padding: 10px 20px; border-radius: 6px;">⬅ Back</a>
+    </div>
+
+    <% [...events].reverse().forEach(e => { %>
+        <div style="background: white; border-radius: 12px; padding: 25px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 6px solid #1a73e8;">
+            <div style="display: flex; justify-content: space-between;">
+                <h3><%= e.title %></h3>
+                <a href="/delete-event/<%= e.id %>" onclick="return confirm('Delete this event?')" style="color: #d93025; text-decoration: none; font-weight: bold;">🗑 Delete</a>
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                <tr style="background: #f8f9fa; text-align: left;">
+                    <th style="padding: 12px; border-bottom: 2px solid #eee;">Intern Name</th>
+                    <th style="padding: 12px; border-bottom: 2px solid #eee;">Time</th>
+                </tr>
+                <% e.interactors.forEach(i => { %>
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;">👤 <%= i.name %></td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee; color: #666;"><%= i.time %></td>
+                    </tr>
+                <% }) %>
+            </table>
+            <% if (e.interactors.length === 0) { %> <p style="color:#999; text-align:center;">No interactions yet.</p> <% } %>
+        </div>
+    <% }) %>
+</body>
+</html>

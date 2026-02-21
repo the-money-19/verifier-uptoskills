@@ -1,0 +1,22 @@
+<body style="font-family: sans-serif; background: #f8f9fa; margin: 0; text-align: center;">
+    <div style="background: #1a73e8; color: white; padding: 30px;">
+        <h1>Admin Command Center</h1>
+    </div>
+    <div style="max-width: 600px; margin: 30px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <a href="/past-events" style="flex:1;"><button style="width:100%; padding:12px; cursor:pointer;">📂 View History</button></a>
+            <a href="/" style="flex:1;"><button style="width:100%; padding:12px; cursor:pointer;">🌐 Live Site</button></a>
+        </div>
+        <hr>
+        <h3 style="text-align:left;">Create New Post Event</h3>
+        <form action="/create-event" method="POST" enctype="multipart/form-data" style="text-align:left;">
+            <label>Event Title</label><br>
+            <input type="text" name="title" required style="width:100%; padding:10px; margin:8px 0;"><br>
+            <label>Description</label><br>
+            <textarea name="description" style="width:100%; padding:10px; margin:8px 0; height:60px;"></textarea><br>
+            <label>Post Image</label><br>
+            <input type="file" name="eventImage" required style="margin:10px 0;"><br>
+            <button type="submit" style="width:100%; padding:15px; background:#34a853; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Launch Event</button>
+        </form>
+    </div>
+</body>
