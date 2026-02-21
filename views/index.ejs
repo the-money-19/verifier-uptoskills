@@ -23,7 +23,8 @@
         <% if (event) { %>
             <h1><%= event.title %></h1>
             <p><%= event.description %></p>
-            <img src="/<%= event.imagePath %>" class="event-img">
+            
+            <img src="<%= event.imageData %>" class="event-img">
             
             <form action="/verify" method="POST" enctype="multipart/form-data">
                 <input type="text" name="internName" placeholder="Enter Your Full Name" required>
